@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Tool</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        .line {
+            display: flex;
+            align-items: center; /* Aligns items vertically */
+            margin-bottom: 10px; /* Adds some space between lines */
+        }
+
+        .tool-container {
+            margin: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .editable-text {
+            cursor: pointer;
+            display: inline-block;
+            margin-right: 20px;
+            width: 150px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .time-dropdown {
+            display: inline-block;
+            margin-right: 10px;
+        }
+
+        .checkbox-container {
+            display: inline-block;
+        }
+
+        .checkbox-container label {
+            display: inline-block;
+            margin-left: 5px;
+        }
+
+        .deleteLineButton {
+            margin-left: 10px;
+            background-color: transparent;
+            border: none;
+            cursor: pointer;
+        }
+
+        .deleteLineButton svg {
+            fill: red; /* Set SVG color */
+        }
+
+        .button-container {
+            text-align: center;
+            width: 100%;
+        }
+
+        #addLineButton {
+            display: block;
+            margin: 10px auto;
+            border: none; /* Removes the border */
+            background: none; /* Removes the background */
+            cursor: pointer; /* Changes cursor to pointer on hover */
+            padding: 5px; /* Adds some padding (optional, adjust as needed) */
+        }
+
+        #addLineButton:focus {
+            outline: none; /* Removes the focus outline */
+        }
+
+
+        .option {
+            display: none;
+        }
+
+        .option, .option4 {
+            display: none;
+        }
+
+        .checkbox-icon {
+            width:  24px;
+            height: 24px;
+            vertical-align:  middle;
+            margin-right:  10px;
+            pointer-events: all;
+        }
+
+        .checked, .unchecked {
+            display:  none; /*Hide both by default */
+        }
+
+        .svg-checkbox {
+            cursor: pointer; /* Indicates the label is clickable */
+            display: inline-flex; /* Aligns the SVG and label text */
+            align-items: center; /* Centers the SVG with the label text */
+        }
+
+        .svg-checkbox input[type="checkbox"] + .checkbox-icon {
+            fill: red; /* Default color for unchecked */
+        }
+
+        .svg-checkbox input[type="checkbox"]:checked + .checkbox-icon {
+            fill: green; /* Color for checked */
+        }
+    </style>
+</head>
+<body>
+    <div class="tool-container">
+        <!-- Add New Line button -->
+        <div class="button-container">
+            <button id="addLineButton">
+                <img src="plus.svg" width="24" height="24" alt="Add Line" />
+            </button>
+    </div>
+
+    <script>
+
+        function editText(element) {
+            var currentValue = element.innerHTML;
+            var input = document.createElement('input');
+            input.type = 'text';
+            input.value = currentValue;
+            input.onblur = function() {
+                element.innerHTML = this.value;
+                saveLines();
+            };
+            element.innerHTML = '';
+            element.appendChild(input);
+            input.focus();
+        }
+
+        function addNewLine(text = '') {
+            if (text === '') {
+                return;
+            }
+            var container = document.querySelector('.tool-container');
+            var newLine = document.createElement('div');
+            newLine.className = 'line';
+            newLine.innerHTML = `
+                <p class="editable-text" ondblclick="editText(this)">New Line</p>
+                <select class="time-dropdown"></select>
+                <div class="checkbox-container">
+                    <label class="svg-checkbox">
+                        <input type="checkbox" name="option1" class="option">
+                        <img src="house_unchecked.svg" class="checkbox-icon unchecked" alt="Unchecked">
+                        <img src="house_checked.svg" class="checkbox-icon checked" alt="Checked" style="display: none;">
+                    </label>
+                    <label class="svg-checkbox">
+                        <input type="checkbox" name="option2" class="option">
+                        <img src="euro_unchecked.svg" class="checkbox-icon unchecked" alt="Unchecked">
+                        <img src="euro_checked.svg" class="checkbox-icon checked" alt="Checked" style="display: none;">
+                    </label>
+                    <label class="svg-checkbox">
+                        <input type="checkbox" name="option3" class="option">
+                        <img src="rule_unchecked.svg" class="checkbox-icon unchecked" alt="Unchecked">
+                        <img src="rule_checked.svg" class="checkbox-icon checked" alt="Checked" style="display: none;">
+                    </label>
+                    <label class="svg-checkbox">
+                        <input type="checkbox" name="option4" class="option4" onclick="uncheckOthers(this)">
+                        <img src="check_unchecked.svg" class="checkbox-icon unchecked" alt="Unchecked">
+                        <img src="check_checked.svg" class="checkbox-icon checked" alt="Checked" style="display: none;">
+                    </label>
+                </div>
+            `;
+
+            // Create delete button for new line with SVG
+            var deleteButton = document.createElement('button');
+            deleteButton.className = 'deleteLineButton';
+            deleteButton.innerHTML = `
+                <img src="trash.svg" width="24" height="24" alt="Delete" />
+            `;
+            deleteButton.addEventListener('click', deleteLine);
+
+            newLine.appendChild(deleteButton);
+            container.appendChild(newLine);
+            generateTimeOptionsForDropdown(newLine.getElementsByClassName('time-dropdown')[0]);
+            newLine.querySelector('.deleteLineButton').addEventListener('click', deleteLine);
+
+            // Attach event listeners to the new line's checkboxes
+            var newCheckboxes = newLine.querySelectorAll('.svg-checkbox input[type="checkbox"]');
+            newCheckboxes.forEach(function(checkbox) {
+                checkbox.addEventListener('change', function() {
+                    toggleCheckboxImages(this);
+                });
+                // Initialize the state of the checkbox
+                toggleCheckboxImages(checkbox);
+            });
+
+            // Move the "Add New Line" button to the bottom
+            container.appendChild(document.getElementById('addLineButton'));
+
+            newLine.querySelector('.editable-text').innerHTML = text
+            saveLines();
+        }
+
+        function toggleCheckboxImages(checkbox) {
+            var uncheckedImg = checkbox.nextElementSibling;
+            var checkedImg = uncheckedImg.nextElementSibling;
+            if (checkbox.checked) {
+                uncheckedImg.style.display = 'none';
+                checkedImg.style.display = 'block';
+            } else {
+                uncheckedImg.style.display = 'block';
+                checkedImg.style.display = 'none';
+            }
+        }
+
+        function generateTimeOptionsForDropdown(dropdown) {
+            var startTime = new Date(0, 0, 0, 10, 0, 0);
+            var endTime = new Date(0, 0, 0, 23, 45, 0);
+            var currentTime = new Date(startTime.getTime());
+            while (currentTime <= endTime) {
+                var option = document.createElement('option');
+                var hours = currentTime.getHours().toString().padStart(2, '0');
+                var minutes = currentTime.getMinutes().toString().padStart(2, '0');
+                option.value = `${hours}:${minutes}`;
+                option.text = `${hours}:${minutes}`;
+                dropdown.appendChild(option);
+                currentTime.setMinutes(currentTime.getMinutes() + 15);
+            }
+        }
+
+        function deleteLine(event) {
+            var isConfirmed = confirm('Are you sure you want to delete this line?');
+            if (isConfirmed) {
+                var lineToDelete = event.target.closest('.line');
+                if (lineToDelete) {
+                    lineToDelete.remove();
+                    saveLines();
+                }
+            }
+        }
+
+        function uncheckOthers(checkbox) {
+            if (checkbox.checked) {
+                var siblings = checkbox.parentElement.parentElement.getElementsByClassName('option');
+                for (var i = 0; i < siblings.length; i++) {
+                    siblings[i].checked = false;
+                    toggleCheckboxImages(siblings[i]); // Update the checkbox images
+                }
+            }
+        }
+
+        // Initialize time dropdowns for existing lines
+        document.querySelectorAll('.time-dropdown').forEach(generateTimeOptionsForDropdown);
+        
+        // Attach delete event to existing delete buttons
+        document.querySelectorAll('.deleteLineButton').forEach(button => {
+            button.addEventListener('click', deleteLine);
+        });
+
+        // checkbox coloring for checked and unchecked
+        document.querySelectorAll('.svg-checkbox input[type="checkbox"]').forEach(function(checkbox) {
+            checkbox.addEventListener('change', function() {
+                var svgImage = this.nextElementSibling;
+                if (this.checked) {
+                    svgImage.style.fill = 'green';
+                } else {
+                    svgImage.style.fill = 'red';
+                }
+            });
+        });
+
+        function updateCheckboxColor(checkbox) {
+            var svgImage = checkbox.nextElementSibling;
+            if (checkbox.checked) {
+                svgImage.style.fill = 'green';
+            } else {
+                svgImage.style.fill = 'red';
+            }
+        }
+
+        document.querySelectorAll('.svg-checkbox input[type="checkbox"]').forEach(function(checkbox) {
+            checkbox.addEventListener('change', function() {
+                var uncheckedImg = this.nextElementSibling;
+                var checkedImg = uncheckedImg.nextElementSibling;
+                if (this.checked) {
+                    uncheckedImg.style.display = 'none';
+                    checkedImg.style.display = 'block';
+                } else {
+                    uncheckedImg.style.display = 'block';
+                    checkedImg.style.display = 'none';
+                }
+            });
+        });
+
+        // Initialize checkbox states on page load
+        document.querySelectorAll('.svg-checkbox input[type="checkbox"]').forEach(function(checkbox) {
+            var event = new Event('change');
+            checkbox.dispatchEvent(event);
+        });
+
+        function saveLines() {
+            var lines = document.querySelectorAll('.line');
+            var lineData = Array.from(lines).map(function(line) {
+                return line.querySelector('.editable-text').textContent;
+            });
+            localStorage.setItem('lines', JSON.stringify(lineData));
+        }
+
+        // Function to load lines from saved state
+        function loadLines() {
+            var savedLines = JSON.parse(localStorage.getItem('lines'));
+            if (savedLines && savedLines.length > 0) {
+                savedLines.forEach(function(text) {
+                    addNewLine(text);
+                });
+            } else {
+                // Only add a new line if there are no saved lines
+                addNewLine('New Line');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadLines();
+        })
+        
+        document.getElementById('addLineButton').addEventListener('click', function() {
+            addNewLine('New Line');
+        });
+    </script>
+</body>
+</html>
